@@ -1,0 +1,4 @@
+repositoryID: kubernetes-authentication
+owners: # (optional, used to claim repository ownership)
+  - name: Jörn Kleinbub
+    email: joern.kleinbub@yotron.de
