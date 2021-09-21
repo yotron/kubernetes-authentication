@@ -1,0 +1,21 @@
+apiVersion: v2
+name: Kubernetes Authentication
+version: "0.8.0"
+kubeVersion: ">= 1.16.0"
+description: Add authentication sidcars automatically to all of your Apis in your Kubernetes Pods which take over the authentication of a request.
+type: application
+keywords:
+  - Authentication
+  - Sidecar
+  - Api Authentication
+  - Token Authentication
+  - Webhook Admission
+  - YOTRON
+home: https://www.kubernetes-authentication.io
+maintainers:
+  - name: Jörn kleinbub
+    email: joern.kleinbub@yotron.de
+    url: https://www.yotron.de
+icon: https://www.cleark8s.com/img/g1002.png
+annotations:
+  Web: A list of annotations keyed by name (optional).

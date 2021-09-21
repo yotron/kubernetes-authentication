@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeauth-default-nginx-http-conf-cm
+  namespace: {{ .Values.namespace }}
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes  3;
+    error_log /dev/stdout debug;
+    events {
+      worker_connections  10240;
+    }
+    http {
+      log_format  main
+              'remote_addr:$remote_addr\t'
+              'time_local:$time_local\t'
+              'method:$request_method\t'
+              'uri:$request_uri\t'
+              'host:$host\t'
+              'status:$status\t'
+              'bytes_sent:$body_bytes_sent\t'
+              'referer:$http_referer\t'
+              'useragent:$http_user_agent\t'
+              'forwardedfor:$http_x_forwarded_for\t'
+              'request_time:$request_time';
+
+      access_log /dev/stdout main;
+      server {
+        listen       80;
+        server_name  _;
+
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+
+        location / {
+          auth_request /cleark8s_validate;
+          proxy_pass http://127.0.0.1:{{ .Values.nginx.ports.target }}/;
+          error_page 500 =401 /error/401;
+        }
+
+        location /error/401 {
+           return 401;
+        }
+
+        location /cleark8s_validate {
+          proxy_pass {{ .Values.nginx.authentication.url }};
+          proxy_pass_request_body off;
+          set $token $arg_token;
+          proxy_set_header Content-Length "";
+          proxy_set_header Authorization $http_authorization;
+        }
+
+      }
+
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeauth-default-nginx-https-conf-cm
+  namespace: {{ .Values.namespace }}
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes  3;
+    error_log /dev/stdout debug;
+    events {
+      worker_connections  10240;
+    }
+    http {
+      log_format  main
+              'remote_addr:$remote_addr\t'
+              'time_local:$time_local\t'
+              'method:$request_method\t'
+              'uri:$request_uri\t'
+              'host:$host\t'
+              'status:$status\t'
+              'bytes_sent:$body_bytes_sent\t'
+              'referer:$http_referer\t'
+              'useragent:$http_user_agent\t'
+              'forwardedfor:$http_x_forwarded_for\t'
+              'request_time:$request_time';
+
+      access_log /dev/stdout main;
+      server {
+        listen        443 ssl;
+        server_name  _;
+        proxy_intercept_errors on;
+
+        ssl_certificate     /etc/nginxssl/tls.crt;
+        ssl_certificate_key /etc/nginxssl/tls.key;
+        ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+
+        location / {
+          auth_request /cleark8s_validate;
+          proxy_pass http://127.0.0.1:{{ .Values.nginx.ports.target }}/;
+          proxy_set_header            Host $host;
+          proxy_set_header            X-Real-IP $remote_addr;
+          proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+          error_page 401 402 500  =401 @unauthorized;
+        }
+
+        location @unauthorized {
+          return 401;
+        }
+
+        location /cleark8s_validate {
+          proxy_pass {{ .Values.nginx.authentication.url }};
+          proxy_pass_request_body off;
+          set $token $arg_token;
+          proxy_set_header Content-Length "";
+          proxy_set_header Authorization $http_authorization;
+        }
+
+      }
+
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubeauth-default-nginx-tls-secret
+  namespace: kubeauth-system
+type: kubernetes.io/tls
+data:
+  tls.crt: |
+    {{ .Values.nginx.tls.cert }}
+  tls.key: |
+    {{ .Values.nginx.tls.key }}
